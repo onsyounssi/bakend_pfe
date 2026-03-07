@@ -1,6 +1,7 @@
 const express = require("express"); 
 const cors = require("cors"); 
-const dotenv = require("dotenv"); 
+const dotenv = require("dotenv");
+const path = require("path"); 
 const connectDB = require("./config/db.js"); 
 
 dotenv.config();
@@ -18,6 +19,7 @@ app.use(express.json());
 const usersRoutes = require("./routes/usersRoutes.js");
 app.use("/api/Users", usersRoutes);
 
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 const sitterProfileRoutes = require("./routes/sitterProfileRoutes.js");
 app.use("/api/SitterProfiles", sitterProfileRoutes);
 

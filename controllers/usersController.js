@@ -17,25 +17,33 @@ err.message });
 };
  
 exports.register = async (req, res) => { 
-  const { nom , email, role, password, adresse } = req.body; 
- 
   try { 
+    const { nom, email, password, role, adresse} = req.body; 
+ 
     const userExiste = await User.findOne({ email }); 
     if (userExiste) { 
-      return res.status(400).json({ message: "Utilisateur déjà existant" }); 
+      return res.status(400).json({ message: "Email déjà utilisé" 
+}); 
     } 
+     const hashedPassword = await bcrypt.hash(password, 10); 
  
-    const hashedPassword = await bcrypt.hash(password, 10); 
- 
-    await User.create({ 
+    const user = await User.create({ 
       nom,  
       email, 
+      password: hashedPassword,
       role,
       adresse,
-      password: hashedPassword 
+      image: req.file ? req.file.filename : null 
     }); 
  
-    res.status(201).json({ message: "Inscription réussie" }); 
+    res.status(201).json({ 
+      _id: user._id, 
+      nom: user.nom, 
+      email: user.email,
+      role: user.role,
+      adresse: user.adresse,
+      image: user.image, 
+    }); 
  
   } catch (error) { 
     res.status(500).json({ message: error.message }); 
@@ -45,7 +53,7 @@ exports.register = async (req, res) => {
 
 
 exports.login = async (req, res) => { 
-  const { email, password } = req.body; 
+  const { email, password,  } = req.body; 
  
   try { 
     const user = await User.findOne({ email }); 
