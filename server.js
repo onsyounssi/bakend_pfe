@@ -23,6 +23,9 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 const sitterProfileRoutes = require("./routes/sitterProfileRoutes.js");
 app.use("/api/SitterProfiles", sitterProfileRoutes);
 
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+
 const reviewRoutes = require("./routes/reviewRoutes.js");
 app.use("/api/Reviews", reviewRoutes);
 

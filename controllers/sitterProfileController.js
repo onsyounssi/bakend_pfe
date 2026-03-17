@@ -13,6 +13,47 @@ err.message });
 } 
 }; 
 
+exports.register = async (req, res) => { 
+  try { 
+    const { nom, tarifHoraire, experience, noteMoyenne, disponibilités, certification} = req.body; 
+ 
+    const userExiste = await SitterProfile.findOne({ nom }); 
+    if (userExiste) { 
+      return res.status(400).json({ message: "Nom déjà utilisé" 
+}); 
+    } 
+ 
+    const sitterProfile = await SitterProfile.create({ 
+      nom,
+      tarifHoraire,  
+      experience,  
+      noteMoyenne,
+      disponibilités,
+      certification,
+      image: req.file ? req.file.filename : null 
+    }); 
+ 
+    res.status(201).json(
+      {
+       _id: sitterProfile._id, 
+      nom: sitterProfile.nom,
+      tarifHoraire: sitterProfile.tarifHoraire, 
+      experience: sitterProfile.experience,
+      noteMoyenne: sitterProfile.noteMoyenne,
+      disponibilités: sitterProfile.disponibilités,
+      certification: sitterProfile.certification,
+      image: sitterProfile.image, 
+    }
+
+    ); 
+ 
+  } catch (error) { 
+    res.status(500).json({ message: error.message }); 
+  } 
+}; 
+
+
+
 
 // Récupérer tous les profils de sitter 
 exports.listerSitterProfiles = async (req, res) => { 

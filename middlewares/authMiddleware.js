@@ -32,6 +32,6 @@ exports.authorizeRoles = (roles = []) => {
     } 
     next(); 
   }; 
-}; 
+}
  
  

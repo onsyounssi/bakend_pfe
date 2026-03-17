@@ -9,6 +9,7 @@ exports.ajouterUtilisateur = async (req, res) => {
 try { 
 const nouvelUser = new User(req.body); 
 await nouvelUser.save(); 
+
 res.status(201).json(nouvelUser); 
 } catch (err) { 
 res.status(400).json({ message: "Erreur d’ajout", error: 
@@ -18,45 +19,45 @@ err.message });
  
 exports.register = async (req, res) => { 
   try { 
-    const { nom, email, password, role, adresse} = req.body; 
+    const { fullName, phone, email, role, password, acceptTerms} = req.body; 
  
-    const userExiste = await User.findOne({ email }); 
+    const userExiste = await User.findOne( { email , password }); 
     if (userExiste) { 
+
       return res.status(400).json({ message: "Email déjà utilisé" 
 }); 
     } 
      const hashedPassword = await bcrypt.hash(password, 10); 
  
     const user = await User.create({ 
-      nom,  
-      email, 
-      password: hashedPassword,
+      fullName,
+      phone,
+      email,
       role,
-      adresse,
+      password: hashedPassword,
+      acceptTerms,
       image: req.file ? req.file.filename : null 
     }); 
  
     res.status(201).json({ 
-      _id: user._id, 
-      nom: user.nom, 
-      email: user.email,
-      role: user.role,
-      adresse: user.adresse,
+      _id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
       image: user.image, 
     }); 
  
   } catch (error) { 
     res.status(500).json({ message: error.message }); 
   } 
-}; 
-
-
+};
 
 exports.login = async (req, res) => { 
-  const { email, password,  } = req.body; 
+  const {email, password, role  } = req.body; 
  
   try { 
-    const user = await User.findOne({ email }); 
+    const user = await User.findOne({ email, role }); 
     if (!user) { 
       return res.status(400).json({ message: "Identifiants invalides" }); 
     } 
@@ -72,14 +73,15 @@ exports.login = async (req, res) => {
       { expiresIn: "1h" } 
     ); 
  
-    res.json({ 
-      token, 
-      user: { 
-        id: user._id, 
-        nom: user.nom, 
-        email: user.email, 
-        role: user.role 
-      } 
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        phone: user.phone,
+        role: user.role
+      }
     }); 
  
   } catch (error) { 
