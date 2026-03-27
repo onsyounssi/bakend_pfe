@@ -3,7 +3,6 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const path = require("path"); 
 const connectDB = require("./config/db.js"); 
-//const stripe = require('stripe')('sk_test_51TEuEjF6c29lnWPAQ7tzDdFIe556b3lyMU3mvdKGD6g6q7wZMnGnXF1DMUFYGGiyIK8YMc4QGGjiou7GX6ygo28N00nvE22FDQ')
 dotenv.config();
 
 
