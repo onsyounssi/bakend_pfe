@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken"); 
-const User = require("../models/Users.js"); 
+const User = require("../models/Users.js");
+
 exports.protect = (req, res, next) => { 
 const authHeader = req.headers.authorization; 
 if (!authHeader || !authHeader.startsWith("Bearer ")) { 
@@ -31,6 +32,6 @@ exports.authorizeRoles = (roles = []) => {
     } 
     next(); 
   }; 
-}; 
+}
  
  
