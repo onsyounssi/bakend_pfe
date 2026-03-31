@@ -134,7 +134,7 @@ err.message });
  
 exports.register = async (req, res) => { 
   try { 
-    const { fullName, phone, email, role, password, acceptTerms} = req.body; 
+    const { lastName, firstName, phone, email, role, password, acceptTerms} = req.body; 
  
     const userExiste = await User.findOne( { email }); 
     if (userExiste) { 
@@ -145,7 +145,8 @@ exports.register = async (req, res) => {
      const hashedPassword = await bcrypt.hash(password, 10); 
  
     const user = new User({ 
-      fullName,
+      lastName,
+      firstName,
       phone,
       email,
       role,
@@ -160,7 +161,8 @@ exports.register = async (req, res) => {
       message: 'User registered successufully',
       user:{
       _id: user._id,
-        fullName: user.fullName,
+        lastName: user.lastName,
+        firstName: user.firstName,        
         email: user.email,
         phone: user.phone,
         role: user.role,
@@ -189,7 +191,7 @@ exports.login = async (req, res) => {
     } 
  
     const token = jwt.sign( 
-      { id: user._id, role: user.role ,nom: user.nom }, 
+      { id: user._id, role: user.role , firstName: user.firstName, lastName: user.lastName }, 
       process.env.JWT_SECRET, 
       { expiresIn: "1h" } 
     ); 
@@ -198,10 +200,11 @@ exports.login = async (req, res) => {
       token,
       user: {
         id: user._id,
-        fullName: user.fullName,
-        email: user.email,
-        phone: user.phone,
-        role: user.role
+       firstName: user.firstName,
+       lastName: user.lastName,
+       email: user.email,
+       phone: user.phone,
+       role: user.role
       }
     }); 
  

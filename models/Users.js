@@ -2,16 +2,30 @@
 const mongoose = require("mongoose");
 const UserSchema = new mongoose.Schema(
     {
-    fullName: {
+    lastName: {
         type: String,
     required: [true, 'Le nom complet est requis'],
     trim: true 
     },
-      phone:{
+    firstName: {
+        type: String,
+        required: [true, 'Le prénom est requis'],
+        trim: true 
+    },
+     phone: {
         type: String,
         required: [true, 'Le téléphone est requis'],
         unique: true,
-        trim: true
+        trim: true,
+        // On s'assure que c'est bien 8 chiffres (sans compter le préfixe si présent)
+        validate: {
+            validator: function(v) {
+                // Supprime le préfixe pour vérifier la longueur utile
+                const cleanNumber = v.replace(/^(?:\+216|00216)/, '');
+                return /^[24579]\d{7}$/.test(cleanNumber);
+            },
+            message: props => `${props.value} n'est pas un numéro tunisien valide !`
+        }
     },
     email: { 
         type: String,
@@ -30,8 +44,8 @@ const UserSchema = new mongoose.Schema(
     role: {
         type: String,
         required: [true, 'Le rôle est requis'],
-        enum: ['parent', 'babysitter','admin'],
-            default: 'parent'},
+        enum: ['parente', 'baby-sitter','admin'],
+            default: 'parente'},
     acceptTerms: {
     type: Boolean,
     required: true,
