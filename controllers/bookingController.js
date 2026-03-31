@@ -6,7 +6,7 @@ const Booking = require("../models/Booking.js");
 // Ajouter un réservation 
 exports.ajouterBooking = async (req, res) => { 
 try { 
-const nouvelBooking = new SitterProfile(req.body); 
+const nouvelBooking = new Booking(req.body); 
 await nouvelBooking.save(); 
 res.status(201).json(nouvelBooking); 
 } catch (err) { 
