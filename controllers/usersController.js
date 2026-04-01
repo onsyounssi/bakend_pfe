@@ -6,24 +6,16 @@ const crypto = require("crypto");
 
 const nodemailer = require("nodemailer");
 exports.forgotPassword = async (req, res) => {
-  // configure mail
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL,
-      pass: process.env.EMAIL_PASSWORD
-    }
-  });
   try {
-    console.log('Requête reçue:', req.body);
+    console.log('Requête reçue (forgot):', req.body);
     const { email } = req.body;
 
     if (!email) {
       return res.status(400).json({ message: 'Email requis' });
     }
 
-    // Vérifier si l'utilisateur existe
-    const user = await User.findOne({ email });
+    // Recherche de l'utilisateur avec regex insensible à la casse
+    const user = await User.findOne({ email: new RegExp('^' + email + '$', "i") });
     if (!user) {
       return res.status(404).json({ message: 'Aucun utilisateur trouvé avec cet email' });
     }
@@ -34,40 +26,39 @@ exports.forgotPassword = async (req, res) => {
     user.resetPasswordExpire = Date.now() + 15 * 60 * 1000; // 15 minutes
 
     await user.save();
-
     console.log('Token généré pour', email, ':', token);
 
-    // Ici, vous devriez envoyer un email avec le token
-    // Pour le test, on renvoie le token dans la réponse
+    // Simulation de l'envoi d'e-mail (Car le transporter NodeMailer posait des erreurs serveur quand `.env` était incomplet)
+    /*
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL,
+        pass: process.env.EMAIL_PASSWORD
+      }
+    });
+
+    const resetUrl = `http://localhost:3000/reset-password/${token}`;
+    await transporter.sendMail({
+       to: user.email,
+       subject: "Password Reset",
+       text: `Click the link below:\n${resetUrl}`
+    });
+    */
+
     res.status(200).json({
-      message: 'Email de réinitialisation envoyé avec succès',
-      token: token // À enlever en production, juste pour le test
+      message: 'Email de réinitialisation envoyé avec succès (Simulé)',
+      token: token
     });
 
   } catch (error) {
-    console.error('Erreur détaillée:', error);
+    console.error('Erreur détaillée forgotPassword:', error);
     res.status(500).json({
-      message: 'Erreur serveur',
+      message: 'Erreur serveur interne',
       error: error.message
     });
   }
 };
-/*const resetUrl = `http://localhost:3000/reset-password/${token}`;
-const message = `
-You requested a password reset.
-Click the link below:
-${resetUrl}
-`;
-
-await transporter.sendMail({
-to: user.email,
-subject: "Password Reset",
-text: message
-});
- 
-
-res.json({ message: "Reset email sent" });
-};*/
 exports.resetPassword = async (req, res) => {
 
   try {

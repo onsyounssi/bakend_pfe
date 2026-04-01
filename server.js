@@ -45,6 +45,9 @@ const chatRoutes = require("./routes/chatRoutes");
 app.use(express.json()); 
 app.use("/api/chat", chatRoutes);
 
+const messageRoutes = require("./routes/messageRoutes.js");
+app.use("/api/Messages", messageRoutes);
+
 // Lancer le serveur 
 const PORT = process.env.PORT || 5000; 
 app.listen(PORT, () => { 
