@@ -11,7 +11,7 @@ const BookingSchema = new mongoose.Schema(
     dateFin: { type: Date, required: true },
     statut: {
       type: String,
-      enum: ["pending", "confirmed", "completed", "cancelled"],
+      enum: ["pending", "accepted", "confirmed", "completed", "cancelled"],
       default: "pending",
     },
     montantTotale: { type: Number, default: 0 },
