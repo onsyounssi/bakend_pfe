@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const SitterProfileSchema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", unique: true }, // lien vers le compte User
+    prenom: { type: String, required: true },
     nom: { type: String, required: true },
     image: { type: String },
     localisation: { type: String },

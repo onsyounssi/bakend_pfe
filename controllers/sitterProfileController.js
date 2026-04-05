@@ -14,6 +14,7 @@ exports.register = asyncHandler(async (req, res) => {
   }
 
   const {
+    prenom,
     nom,
     tarifHoraire,
     experience,
@@ -24,12 +25,13 @@ exports.register = asyncHandler(async (req, res) => {
     disponibilites,
   } = req.body;
 
-  if (!nom || !tarifHoraire) {
-    return res.status(400).json({ message: "nom et tarifHoraire sont requis" });
+  if (!prenom || !nom || !tarifHoraire) {
+    return res.status(400).json({ message: "prenom, nom et tarifHoraire sont requis" });
   }
 
   const sitterProfile = await SitterProfile.create({
     userId,
+    prenom,
     nom,
     tarifHoraire: parseFloat(tarifHoraire),
     experience,
