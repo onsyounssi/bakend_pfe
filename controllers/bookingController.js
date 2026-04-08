@@ -48,7 +48,7 @@ exports.createBooking = asyncHandler(async (req, res) => {
 exports.getBookingsByParent = asyncHandler(async (req, res) => {
   const parentId = req.user.id;
   const bookings = await Booking.find({ parentId })
-    .populate("sitterProfileId", "nom image tarifHoraire localisation")
+    .populate("sitterProfileId", "prenom nom image tarifHoraire localisation")
     .sort({ createdAt: -1 });
   res.json(bookings);
 });
@@ -59,7 +59,7 @@ exports.getBookingsByParent = asyncHandler(async (req, res) => {
 exports.getBookingsBySitter = asyncHandler(async (req, res) => {
   const sitterId = req.user.id;
   const bookings = await Booking.find({ sitterId })
-    .populate("parentId", "firstName lastName phone email")
+    .populate("parentId", "firstName lastName phone email image")
     .sort({ createdAt: -1 });
   res.json(bookings);
 });

@@ -157,11 +157,33 @@ exports.login = async (req, res) => {
 // ─────────────────────────────────────────────
 exports.ajouterUtilisateur = async (req, res) => {
   try {
-    const nouvelUser = new User(req.body);
+    const userData = { ...req.body };
+    if (userData.password) {
+      userData.password = await bcrypt.hash(userData.password, 10);
+    }
+    const nouvelUser = new User(userData);
     await nouvelUser.save();
+
+    // Si c'est un baby-sitter, on peut initialiser son SitterProfile automatiquement.
+    if (nouvelUser.role === 'baby-sitter') {
+      const SitterProfile = require("../models/SitterProfile.js");
+      await SitterProfile.create({
+        userId: nouvelUser._id,
+        prenom: nouvelUser.firstName,
+        nom: nouvelUser.lastName,
+        tarifHoraire: 10, // Valeur par defaut
+      });
+    }
+
     res.status(201).json(nouvelUser);
   } catch (err) {
-    res.status(400).json({ message: "Erreur d'ajout", error: err.message });
+    let errorMessage = "Erreur d'ajout";
+    if (err.name === 'ValidationError') {
+      errorMessage = Object.values(err.errors).map(val => val.message).join(', ');
+    } else if (err.code === 11000) {
+      errorMessage = "Cet email ou ce numéro de téléphone existe déjà.";
+    }
+    res.status(400).json({ message: errorMessage, error: err.message });
   }
 };
 
@@ -205,7 +227,13 @@ exports.updateUtilisateur = async (req, res) => {
     }
     res.json(updatedUser);
   } catch (err) {
-    res.status(400).json({ message: "Erreur de mise à jour", error: err.message });
+    let errorMessage = "Erreur de mise à jour";
+    if (err.name === 'ValidationError') {
+      errorMessage = Object.values(err.errors).map(val => val.message).join(', ');
+    } else if (err.code === 11000) {
+      errorMessage = "Cet email ou ce numéro de téléphone existe déjà.";
+    }
+    res.status(400).json({ message: errorMessage, error: err.message });
   }
 };
 
