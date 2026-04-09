@@ -19,7 +19,7 @@ router.post("/ajouter", sitterProfileController.ajouterSitterProfile);
 
 // Routes CRUD
 router.get("/:id", sitterProfileController.getSitterProfileById);
-router.put("/:id", protect, sitterProfileController.updateSitterProfile);
+router.put("/:id", protect, upload.single("image"), sitterProfileController.updateSitterProfile);
 router.delete("/:id", protect, sitterProfileController.deleteSitterProfile);
 
 module.exports = router;

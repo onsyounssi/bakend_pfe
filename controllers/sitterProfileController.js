@@ -1,4 +1,5 @@
 const SitterProfile = require("../models/SitterProfile.js");
+const User = require("../models/Users.js");
 const asyncHandler = require("../utils/asyncHandler.js");
 
 // ─────────────────────────────────────────────
@@ -48,6 +49,11 @@ exports.register = asyncHandler(async (req, res) => {
     nbAvis: 0,
   });
 
+  // Synchroniser l'image avec le modèle User
+  if (req.file) {
+    await User.findByIdAndUpdate(userId, { image: req.file.filename });
+  }
+
   res.status(201).json({ success: true, profile: sitterProfile });
 });
 
@@ -77,6 +83,14 @@ exports.ajouterSitterProfile = asyncHandler(async (req, res) => {
 // ─────────────────────────────────────────────
 exports.listerSitterProfiles = asyncHandler(async (req, res) => {
   const sitterProfiles = await SitterProfile.find().sort({ createdAt: -1 });
+  
+  // Synchronisation rétroactive pour les utilisateurs existants
+  for (const profile of sitterProfiles) {
+    if (profile.image && profile.image !== "default.jpg") {
+      await User.findByIdAndUpdate(profile.userId, { image: profile.image });
+    }
+  }
+  
   res.json(sitterProfiles);
 });
 
@@ -95,15 +109,47 @@ exports.getSitterProfileById = asyncHandler(async (req, res) => {
 // Mettre à jour un profil
 // ─────────────────────────────────────────────
 exports.updateSitterProfile = asyncHandler(async (req, res) => {
+  const updateData = { ...req.body };
+
+  // Gérer l'image si elle est présente
+  if (req.file) {
+    updateData.image = req.file.filename;
+  }
+
+  // Parser les champs envoyés en FormData (chaînes JSON)
+  if (typeof updateData.disponibilites === "string") {
+    try {
+      updateData.disponibilites = JSON.parse(updateData.disponibilites);
+    } catch (e) {
+      console.error("Erreur parsing disponibilites:", e);
+    }
+  }
+
+  if (typeof updateData.langues === "string") {
+    updateData.langues = updateData.langues.split(",").map(l => l.trim()).filter(l => l);
+  }
+
+  // Convertir le tarifHoraire en nombre si présent
+  if (updateData.tarifHoraire) {
+    updateData.tarifHoraire = parseFloat(updateData.tarifHoraire);
+  }
+
   const updatedSitter = await SitterProfile.findByIdAndUpdate(
     req.params.id,
-    req.body,
+    updateData,
     { new: true, runValidators: true }
   );
+
   if (!updatedSitter) {
     return res.status(404).json({ message: "Profil de sitter non trouvé" });
   }
-  res.json(updatedSitter);
+
+  // Synchroniser l'image avec le modèle User si elle a été mise à jour
+  if (req.file) {
+    await User.findByIdAndUpdate(updatedSitter.userId, { image: req.file.filename });
+  }
+
+  res.json({ success: true, profile: updatedSitter });
 });
 
 // ─────────────────────────────────────────────

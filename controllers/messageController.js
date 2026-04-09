@@ -9,8 +9,8 @@ exports.getMessages = async (req, res) => {
     const messages = await Message.find({
       $or: [{ senderId: userId }, { receiverId: userId }]
     })
-    .populate("senderId", "firstName lastName image")
-    .populate("receiverId", "firstName lastName image")
+    .populate("senderId", "firstName lastName image role")
+    .populate("receiverId", "firstName lastName image role")
     .sort({ createdAt: 1 }); // Tri chronologique pour le fil de discussion
 
     res.json(messages);
@@ -29,8 +29,8 @@ exports.sendMessage = async (req, res) => {
 
     // On renvoie le message avec les infos peuplées pour l'affichage immédiat
     const fullMessage = await Message.findById(newMessage._id)
-      .populate("senderId", "firstName lastName image")
-      .populate("receiverId", "firstName lastName image");
+      .populate("senderId", "firstName lastName image role")
+      .populate("receiverId", "firstName lastName image role");
 
     res.status(201).json(fullMessage);
   } catch (err) {
