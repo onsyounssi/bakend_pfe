@@ -4,10 +4,15 @@ const router = express.Router();
 const usersController = require("../controllers/usersController");
 const { protect, authorizeRoles } = require("../middlewares/authMiddleware.js");
 const upload = require("../middlewares/uploadMiddleware");
+const {
+ forgotPassword,
+ resetPassword
+} = require("../controllers/usersController");
 
 // Mot de passe oublié / réinitialisation
-router.post("/forgot-password", usersController.forgotPassword);
-router.post("/reset-password/:token", usersController.resetPassword);
+router.post("/forgot-password", forgotPassword);
+router.put("/reset-password/:token", resetPassword);
+
 
 // Inscription publique
 router.post("/register", usersController.register);
