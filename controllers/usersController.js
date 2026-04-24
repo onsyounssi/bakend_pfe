@@ -4,117 +4,94 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
+const sendEmail = require("../utils/sendEmail.js");
+const { generateResetToken, hashToken } = require("../utils/cryptoToken.js");
 
 // ─────────────────────────────────────────────
 // Forgot Password
 // ─────────────────────────────────────────────
 exports.forgotPassword = async (req, res) => {
   try {
-    const user = await User.findOne({ email: req.body.email });
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ message: "Email requis" });
+    }
 
-    // Ne pas révéler si l'utilisateur existe
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+
+    // Toujours répondre 200 pour ne pas révéler si l'email existe (sécurité)
     if (!user) {
-      return res.json({ message: "Si cet email existe, un lien a été envoyé." });
-    }
-
-    // Générer token
-    const resetToken = crypto.randomBytes(32).toString("hex");
-
-    // Hasher le token
-    const hashedToken = crypto
-      .createHash("sha256")
-      .update(resetToken)
-      .digest("hex");
-
-    user.resetPasswordToken = hashedToken;
-    user.resetPasswordExpire = Date.now() + 15 * 60 * 1000; // 15 min
-
-    await user.save();
-
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
-
-    try {
-      // Envoyer email réel (Gmail)
-      await sendEmail(user.email, resetUrl);
-      console.log(`\n\n[INFO] L'email a bien été expédié via les serveurs de Gmail vers : ${user.email}\n`);
-      res.status(200).json({
-        message: "Email de réinitialisation envoyé avec succès vers votre vraie boîte de réception !"
-      });
-    } catch (emailError) {
-      console.error("\n[DÉBOGAGE] Nodemailer n'a pas pu envoyer l'e-mail. Ce n'est pas grave, nous évitons l'erreur 500 et gardons le token valide pour le développement.");
-
-      // On ne supprime PAS le token pour que vous puissiez continuer.
-      console.log(`\n=======================================================\n`);
-      console.log(`[CONTOURNEMENT LOCAL] Veuillez cliquer sur ce lien pour continuer:\n▶ ${resetUrl}`);
-      console.log(`\n=======================================================\n`);
-
-      // On certifie au frontend que "tout va bien" (code 200 au lieu de 500)
       return res.status(200).json({
-        message: "L'e-mail simulé a été généré. Veuillez regarder le terminal (console) pour le lien de réinitialisation."
+        msg: "Si un compte existe avec cet email, un lien a été envoyé.",
       });
     }
+
+    const resetToken = generateResetToken();
+    const hashed = hashToken(resetToken);
+
+    user.passwordResetToken = hashed;
+    user.passwordResetExpires = Date.now() + 60 * 60 * 1000; // 1 h
+
+    await user.save({ validateBeforeSave: false });
+
+    const frontend = process.env.FRONTEND_URL || "http://localhost:5173";
+    const resetUrl = `${frontend}/reset-password?token=${resetToken}&email=${encodeURIComponent(user.email)}`;
+
+    const message = `
+      <h3>Réinitialisation de votre mot de passe</h3>
+      <p>Bonjour,</p>
+      <p>Cliquez sur le lien ci-dessous pour choisir un nouveau mot de passe (valide 1 heure) :</p>
+      <p><a href="${resetUrl}">${resetUrl}</a></p>
+      <p>Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail.</p>
+    `;
+
+    await sendEmail({
+      email: user.email,
+      subject: "Réinitialisation de votre mot de passe",
+      message,
+    });
+
+    res.json({ msg: "Email envoyé" });
   } catch (error) {
-    res.status(500).json({ message: "Erreur serveur.", error: error.message });
+    console.error("ForgotPassword Error:", error);
+    res.status(500).json({ message: "Erreur serveur lors de l'envoi de l'email", error: error.message });
   }
-};
-
-const sendEmail = async (email, url) => {
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL,
-      pass: process.env.EMAIL_PASSWORD,
-    },
-  });
-
-  await transporter.sendMail({
-    from: '"SmartBabyCare" <noreply@smartbabycare.com>',
-    to: email,
-    subject: "SmartBabyCare - Réinitialisation du mot de passe",
-    html: `
-      <h2>Réinitialisation du mot de passe</h2>
-      <p>Vous avez demandé la réinitialisation de votre mot de passe pour SmartBabyCare.</p>
-      <p>Veuillez cliquer sur le lien ci-dessous pour choisir un nouveau mot de passe :</p>
-      <br/>
-      <a href="${url}" style="background-color: #db2777; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Réinitialiser mon mot de passe</a>
-      <br/><br/>
-      <p>(Ou copiez-collez ce lien : <a href="${url}">${url}</a>)</p>
-      <br/>
-      <p><em>Ce lien est valide pendant 15 minutes.</em></p>
-      <p>Si vous n'avez pas demandé cette réinitialisation, veuillez ignorer cet e-mail.</p>
-    `,
-  });
-
-  return null;
 };
 
 // ─────────────────────────────────────────────
 // Reset Password
 // ─────────────────────────────────────────────
 exports.resetPassword = async (req, res) => {
-  const hashedToken = crypto
-    .createHash("sha256")
-    .update(req.params.token)
-    .digest("hex");
+  try {
+    const { email, token, password } = req.body;
+    if (!email || !token || !password) {
+      return res.status(400).json({ message: "Données invalides." });
+    }
 
-  const user = await User.findOne({
-    resetPasswordToken: hashedToken,
-    resetPasswordExpire: { $gt: Date.now() },
-  });
+    const hashedToken = hashToken(token);
 
-  if (!user) {
-    return res.status(400).json({ message: "Token invalide ou expiré" });
+    const user = await User.findOne({
+      email: email.toLowerCase().trim(),
+      passwordResetToken: hashedToken,
+      passwordResetExpires: { $gt: Date.now() },
+    }).select("+passwordResetToken");
+
+    if (!user) {
+      return res.status(400).json({ message: "Lien invalide ou expiré." });
+    }
+
+    // Le mot de passe sera haché par le hook pre("save") du modèle
+    user.password = password;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+
+    await user.save();
+
+    res.json({ msg: "Mot de passe réinitialisé avec succès" });
+  } catch (error) {
+    console.error("ResetPassword Error:", error);
+    res.status(500).json({ message: "Erreur lors de la réinitialisation", error: error.message });
   }
-
-  user.password = await bcrypt.hash(req.body.password, 10);
-
-  user.resetPasswordToken = undefined;
-  user.resetPasswordExpire = undefined;
-
-  await user.save();
-
-  res.json({ message: "Mot de passe mis à jour" });
 };
 
 // ─────────────────────────────────────────────
@@ -124,12 +101,14 @@ exports.register = async (req, res) => {
   try {
     const { lastName, firstName, phone, email, role, password, acceptTerms } = req.body;
 
+    if (password && password.length > 8) {
+      return res.status(400).json({ message: "Le mot de passe ne doit pas dépasser 8 caractères" });
+    }
+
     const userExiste = await User.findOne({ email });
     if (userExiste) {
       return res.status(409).json({ message: "Email déjà utilisé" });
     }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = new User({
       lastName,
@@ -137,7 +116,7 @@ exports.register = async (req, res) => {
       phone,
       email,
       role,
-      password: hashedPassword,
+      password,
       acceptTerms,
       image: req.file ? req.file.filename : null,
     });
@@ -213,11 +192,7 @@ exports.login = async (req, res) => {
 // ─────────────────────────────────────────────
 exports.ajouterUtilisateur = async (req, res) => {
   try {
-    const userData = { ...req.body };
-    if (userData.password) {
-      userData.password = await bcrypt.hash(userData.password, 10);
-    }
-    const nouvelUser = new User(userData);
+    const nouvelUser = new User(req.body);
     await nouvelUser.save();
 
     // Si c'est un baby-sitter, on peut initialiser son SitterProfile automatiquement.

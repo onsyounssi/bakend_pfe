@@ -15,6 +15,7 @@ const BookingSchema = new mongoose.Schema(
       default: "pending",
     },
     montantTotale: { type: Number, default: 0 },
+    childrenCount: { type: Number, default: 1 },
     message: { type: String, default: "" }, // note/message du parent
     notificationRead: { type: Boolean, default: false }, // sitter a-t-il vu la notif ?
   },

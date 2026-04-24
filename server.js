@@ -69,6 +69,7 @@ const usersRoutes = require("./routes/usersRoutes.js");
 app.use("/api/Users", usersRoutes);
 
 
+
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 const sitterProfileRoutes = require("./routes/sitterProfileRoutes.js");
 app.use("/api/SitterProfiles", sitterProfileRoutes);
@@ -94,3 +95,5 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Serveur lancé sur le port ${PORT}`);
 });
+
+

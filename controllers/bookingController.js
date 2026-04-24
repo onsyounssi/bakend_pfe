@@ -7,7 +7,7 @@ const asyncHandler = require("../utils/asyncHandler.js");
 // Créer une réservation (Parent)
 // ─────────────────────────────────────────────
 exports.createBooking = asyncHandler(async (req, res) => {
-  const { sitterProfileId, dateDebut, dateFin, message } = req.body;
+  const { sitterProfileId, dateDebut, dateFin, message, childrenCount } = req.body;
   const parentId = req.user.id; // injecté par le middleware auth
 
   if (!sitterProfileId || !dateDebut || !dateFin) {
@@ -24,7 +24,8 @@ exports.createBooking = asyncHandler(async (req, res) => {
   const debut = new Date(dateDebut);
   const fin = new Date(dateFin);
   const heures = (fin - debut) / (1000 * 60 * 60);
-  const montantTotale = Math.max(0, heures * sitterProfile.tarifHoraire);
+  const count = childrenCount || 1;
+  const montantTotale = Math.max(0, heures * sitterProfile.tarifHoraire * count);
 
   const booking = new Booking({
     parentId,
@@ -33,6 +34,7 @@ exports.createBooking = asyncHandler(async (req, res) => {
     dateDebut: debut,
     dateFin: fin,
     message: message || "",
+    childrenCount: count,
     montantTotale: parseFloat(montantTotale.toFixed(2)),
     statut: "pending",
   });

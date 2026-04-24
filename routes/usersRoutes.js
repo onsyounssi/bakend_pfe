@@ -11,7 +11,7 @@ const {
 
 // Mot de passe oublié / réinitialisation
 router.post("/forgot-password", forgotPassword);
-router.put("/reset-password/:token", resetPassword);
+router.post("/reset-password", resetPassword);
 
 
 // Inscription publique
