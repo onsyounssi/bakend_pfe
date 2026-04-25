@@ -3,13 +3,15 @@ const User = require("../models/Users.js");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
-const nodemailer = require("nodemailer");
-const sendEmail = require("../utils/sendEmail.js");
 const { generateResetToken, hashToken } = require("../utils/cryptoToken.js");
+const { sendPasswordResetEmail } = require("../utils/sendEmail.js");
+const nodemailer = require("nodemailer");
 
 // ─────────────────────────────────────────────
-// Forgot Password
+// 7. Backend — contrôleur (logique métier)
 // ─────────────────────────────────────────────
+
+/** POST /api/Users/forgot-password  { "email": "..." } */
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -22,7 +24,7 @@ exports.forgotPassword = async (req, res) => {
     // Toujours répondre 200 pour ne pas révéler si l'email existe (sécurité)
     if (!user) {
       return res.status(200).json({
-        msg: "Si un compte existe avec cet email, un lien a été envoyé.",
+        message: "Si un compte existe avec cet email, un lien a été envoyé.",
       });
     }
 
@@ -37,35 +39,40 @@ exports.forgotPassword = async (req, res) => {
     const frontend = process.env.FRONTEND_URL || "http://localhost:5173";
     const resetUrl = `${frontend}/reset-password?token=${resetToken}&email=${encodeURIComponent(user.email)}`;
 
-    const message = `
-      <h3>Réinitialisation de votre mot de passe</h3>
-      <p>Bonjour,</p>
-      <p>Cliquez sur le lien ci-dessous pour choisir un nouveau mot de passe (valide 1 heure) :</p>
-      <p><a href="${resetUrl}">${resetUrl}</a></p>
-      <p>Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail.</p>
-    `;
+    let previewUrl = null;
+    let emailSent = false;
+    try {
+      const info = await sendPasswordResetEmail(user.email, resetUrl);
+      emailSent = true;
+      if (info && info.envelope) {
+        previewUrl = nodemailer.getTestMessageUrl(info) || null;
+      }
+    } catch (emailError) {
+      console.error("⚠️ Email failure, providing direct link for development:", emailError.message);
+    }
 
-    await sendEmail({
-      email: user.email,
-      subject: "Réinitialisation de votre mot de passe",
-      message,
+    return res.status(200).json({
+      message: emailSent 
+        ? "Un lien de réinitialisation a été envoyé à votre adresse email." 
+        : "Lien de réinitialisation généré (E-mail non envoyé).",
+      resetUrl: emailSent ? null : resetUrl, // On donne le lien si l'email a échoué
+      previewUrl
     });
-
-    res.json({ msg: "Email envoyé" });
   } catch (error) {
-    console.error("ForgotPassword Error:", error);
-    res.status(500).json({ message: "Erreur serveur lors de l'envoi de l'email", error: error.message });
+    console.error("CRITICAL: ForgotPassword General Error:", error);
+    res.status(500).json({
+      message: "Erreur serveur lors de la demande de réinitialisation",
+      error: error.message
+    });
   }
 };
 
-// ─────────────────────────────────────────────
-// Reset Password
-// ─────────────────────────────────────────────
+/** POST /api/Users/reset-password  { "email", "token", "password" } */
 exports.resetPassword = async (req, res) => {
   try {
     const { email, token, password } = req.body;
-    if (!email || !token || !password) {
-      return res.status(400).json({ message: "Données invalides." });
+    if (!email || !token || !password || password.length < 8) {
+      return res.status(400).json({ message: "Données invalides (mot de passe min. 8 caractères)." });
     }
 
     const hashedToken = hashToken(token);
@@ -87,7 +94,7 @@ exports.resetPassword = async (req, res) => {
 
     await user.save();
 
-    res.json({ msg: "Mot de passe réinitialisé avec succès" });
+    res.json({ message: "Mot de passe réinitialisé avec succès" });
   } catch (error) {
     console.error("ResetPassword Error:", error);
     res.status(500).json({ message: "Erreur lors de la réinitialisation", error: error.message });

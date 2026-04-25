@@ -83,14 +83,14 @@ exports.ajouterSitterProfile = asyncHandler(async (req, res) => {
 // ─────────────────────────────────────────────
 exports.listerSitterProfiles = asyncHandler(async (req, res) => {
   const sitterProfiles = await SitterProfile.find().sort({ createdAt: -1 });
-  
+
   // Synchronisation rétroactive pour les utilisateurs existants
   for (const profile of sitterProfiles) {
-    if (profile.image && profile.image !== "default.jpg") {
+    if (profile.userId && profile.image && profile.image !== "default.jpg") {
       await User.findByIdAndUpdate(profile.userId, { image: profile.image });
     }
   }
-  
+
   res.json(sitterProfiles);
 });
 

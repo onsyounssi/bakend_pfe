@@ -84,16 +84,26 @@ const bookingRoutes = require("./routes/bookingRoutes.js");
 app.use("/api/Bookings", bookingRoutes);
 
 const chatRoutes = require("./routes/chatRoutes");
-app.use(express.json());
 app.use("/api/chat", chatRoutes);
 
 const messageRoutes = require("./routes/messageRoutes.js");
 app.use("/api/Messages", messageRoutes);
 
+app.use(errorMiddleware);
+
 // Lancer le serveur 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Serveur lancé sur le port ${PORT}`);
+  
+  // Test de la connexion SMTP au démarrage
+  const transporter = require("./config/mail.js");
+  try {
+    await transporter.verify();
+    console.log("✅ Connexion SMTP réussie (Prêt à envoyer des emails)");
+  } catch (err) {
+    console.error("❌ Erreur de configuration SMTP dans .env :", err.message);
+  }
 });
 
 
