@@ -54,6 +54,15 @@ const UserSchema = new mongoose.Schema(
             required: true,
             default: false
         },
+        ville: {
+            type: String,
+            trim: true
+        },
+        statut: {
+            type: String,
+            enum: ['Actif', 'En pause'],
+            default: 'Actif'
+        },
 
         passwordResetToken: { type: String, select: false },
         passwordResetExpires: { type: Date },

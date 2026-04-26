@@ -106,7 +106,7 @@ exports.resetPassword = async (req, res) => {
 // ─────────────────────────────────────────────
 exports.register = async (req, res) => {
   try {
-    const { lastName, firstName, phone, email, role, password, acceptTerms } = req.body;
+    const { lastName, firstName, phone, email, role, password, acceptTerms, ville } = req.body;
 
     if (password && password.length > 8) {
       return res.status(400).json({ message: "Le mot de passe ne doit pas dépasser 8 caractères" });
@@ -125,6 +125,7 @@ exports.register = async (req, res) => {
       role,
       password,
       acceptTerms,
+      ville,
       image: req.file ? req.file.filename : null,
     });
     await user.save();
