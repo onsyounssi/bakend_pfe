@@ -1,5 +1,8 @@
 // controllers/usersController.js
 const User = require("../models/Users.js");
+const SitterProfile = require("../models/SitterProfile.js");
+const Booking = require("../models/Booking.js");
+const Message = require("../models/Message.js");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
@@ -281,12 +284,31 @@ exports.updateUtilisateur = async (req, res) => {
 // ─────────────────────────────────────────────
 exports.deleteUtilisateur = async (req, res) => {
   try {
-    const deletedUser = await User.findByIdAndDelete(req.params.id);
+    const userId = req.params.id;
+
+    // 1. Supprimer le profil Sitter si présent
+    await SitterProfile.findOneAndDelete({ userId: userId });
+
+    // 2. Supprimer les réservations liées (en tant que parent ou sitter)
+    await Booking.deleteMany({
+      $or: [{ parentId: userId }, { sitterId: userId }]
+    });
+
+    // 3. Supprimer les messages liés
+    await Message.deleteMany({
+      $or: [{ senderId: userId }, { receiverId: userId }]
+    });
+
+    // 4. Supprimer l'utilisateur lui-même
+    const deletedUser = await User.findByIdAndDelete(userId);
+
     if (!deletedUser) {
       return res.status(404).json({ message: "Utilisateur non trouvé" });
     }
-    res.json({ message: "Utilisateur supprimé avec succès" });
+
+    res.json({ message: "Utilisateur et toutes ses données associées supprimés avec succès" });
   } catch (err) {
+    console.error("Erreur suppression utilisateur:", err);
     res.status(500).json({ message: "Erreur de suppression", error: err.message });
   }
 };

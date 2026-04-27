@@ -83,15 +83,33 @@ exports.ajouterSitterProfile = asyncHandler(async (req, res) => {
 // ─────────────────────────────────────────────
 exports.listerSitterProfiles = asyncHandler(async (req, res) => {
   const sitterProfiles = await SitterProfile.find().sort({ createdAt: -1 });
+  const Review = require("../models/Review.js");
 
-  // Synchronisation rétroactive pour les utilisateurs existants
-  for (const profile of sitterProfiles) {
+  // On enrichit chaque profil avec les statistiques réelles des avis
+  const enrichedProfiles = await Promise.all(sitterProfiles.map(async (profile) => {
+    // Synchronisation de l'image (logique existante)
     if (profile.userId && profile.image && profile.image !== "default.jpg") {
       await User.findByIdAndUpdate(profile.userId, { image: profile.image });
     }
-  }
 
-  res.json(sitterProfiles);
+    // Calcul dynamique des avis pour assurer la cohérence
+    const reviews = await Review.find({ sitterProfileId: profile._id });
+    const count = reviews.length;
+    const avg = count > 0
+      ? parseFloat((reviews.reduce((acc, r) => acc + r.note, 0) / count).toFixed(1))
+      : 0;
+
+    // Mise à jour si nécessaire (évite les désynchronisations)
+    if (profile.nbAvis !== count || profile.noteMoyenne !== avg) {
+      profile.nbAvis = count;
+      profile.noteMoyenne = avg;
+      await profile.save();
+    }
+
+    return profile;
+  }));
+
+  res.json(enrichedProfiles);
 });
 
 // ─────────────────────────────────────────────
@@ -102,6 +120,21 @@ exports.getSitterProfileById = asyncHandler(async (req, res) => {
   if (!sitterProfile) {
     return res.status(404).json({ message: "Profil de sitter non trouvé" });
   }
+
+  // Synchronisation dynamique lors de l'accès direct au profil
+  const Review = require("../models/Review.js");
+  const reviews = await Review.find({ sitterProfileId: sitterProfile._id });
+  const count = reviews.length;
+  const avg = count > 0
+    ? parseFloat((reviews.reduce((acc, r) => acc + r.note, 0) / count).toFixed(1))
+    : 0;
+
+  if (sitterProfile.nbAvis !== count || sitterProfile.noteMoyenne !== avg) {
+    sitterProfile.nbAvis = count;
+    sitterProfile.noteMoyenne = avg;
+    await sitterProfile.save();
+  }
+
   res.json(sitterProfile);
 });
 
